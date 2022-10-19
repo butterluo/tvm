@@ -259,7 +259,7 @@ def profile_and_build(
     use_3xtf32=True,
 ):
     logging.info("before partitioning:\n%s", mod)
-    mod = partition_for_cutlass(mod)
+    mod = partition_for_cutlass(mod)   #BTBT 把relay中可以被cutls处理的部分划分出来作为func node
     logging.info("after partitioning:\n%s", mod)
 
     num_cutlass_partition = num_cutlass_partitions(mod)
@@ -272,7 +272,7 @@ def profile_and_build(
             "use_3xtf32": use_3xtf32,
             "split_k_slices": split_k_slices,
             "profile_all_alignments": False,
-            "find_first_valid": True,
+            "find_first_valid": True,            #BTBT 这里只尝试 TODO 某个文件的候选超参列表中的第一种运行通过的可能,如果设False的话会用grid search尝试所有可能
             "use_multiprocessing": True,
             "use_fast_math": use_fast_math,
             "tmp_dir": tmp_dir,
@@ -422,6 +422,10 @@ M = 96
 N = 64
 K = 64
 
+@tvm.testing.requires_cutlass
+def test_dense_bias_relu_sm70():   #BTBT sm70
+    verify_dense(get_dense_bias_relu(M, N, K), M, N, K, sm=70)
+    verify_dense(get_dense_bias_relu(M, N, K, out_dtype="float32"), M, N, K, sm=70)
 
 @tvm.testing.requires_cutlass
 def test_dense():
@@ -958,6 +962,23 @@ def test_conv2d_bwd():
         use_vm=True,
     )
 
+# logging.basicConfig(format="%(process)d %(thread)d %(pathname)s : %(lineno)d %(funcName)s %(name)s : %(levelname)s : %(message)s", level=logging.NOTSET) #BTBT 因为tvm封装的pytest,这样修改不了logging
 
 if __name__ == "__main__":
+    import sys
+    tmp = sys.argv                                    #BTBT 需要用这种方法让pytest打印较细的logging
+    sys.argv = [tmp[0],
+        "--log-cli-level", "NOTSET",
+        "--log=cli-format", "%(process)d %(thread)d %(pathname)s : %(lineno)d %(funcName)s %(name)s : %(levelname)s : %(message)s"
+    ]
     tvm.testing.main()
+
+
+
+"""
+会在tmp/中生成*.cu和nvvc编译后的可执行文件
+DEBUG:
+export TOPHUB_LOCATION=NONE                   #防止访问网络去取autotvm的历史调优记录
+export TVM_LOG_DEBUG=DEFAULT=3                #打印cpp层最详细的日志
+
+"""

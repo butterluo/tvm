@@ -154,7 +154,7 @@ class CutlassGemmProfiler:
     """Profile all candidate kernels and select the best one."""
 
     def __init__(self, sm, cutlass_path, binary_path):
-        assert sm in GENERATOR_FUNC_TABLE and sm in DEFAULT_KERNELS, "sm%d not supported yet." % sm
+        assert sm in GENERATOR_FUNC_TABLE, "sm%d not supported yet." % sm  #BTBT sm70
         self.engine = ProfilerEngine(sm, cutlass_path, binary_path)
         self.sm = sm
         self.cache = {}
@@ -165,6 +165,7 @@ class CutlassGemmProfiler:
         """Return the default kernel for the requested architecture.
         For now, the default kernel was picked arbitrary.
         """
+        assert self.sm > 70, "sm70 not supported default (for dynamic sharp) by now."  #BTBT sm70 
         ops = GENERATOR_FUNC_TABLE[self.sm](
             out_dtype,
             arg0_dtype,
@@ -229,7 +230,7 @@ class CutlassGemmProfiler:
             arg1_dtype,
             enumerate_gemm_operators,
             lambda align: all([dim % align == 0 for dim in [M, N, K]]),
-            use_3xtf32,
+            use_3xtf32,    #BTBT ???
             profile_all_alignments=profile_all_alignments,
             # TODO(masahi): Invesitigate when fp32 accumulation is needed for gemm
             accumlator_dtype=out_dtype,

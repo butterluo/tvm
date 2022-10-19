@@ -896,18 +896,18 @@ class CutlassModuleCodegen {
  */
 transform::Pass CompileForCutlassImpl() {
   auto pass_func = [=](IRModule mod, const transform::PassContext& pass_ctx) {
-    VLOG(1) << "CompileForCutlass input:" << std::endl << PrettyPrint(mod);
-    const auto* pf = runtime::Registry::Get("relay.ext.cutlass.compile_for_cutlass");
-    ICHECK(pf != nullptr) << "Cannot find compile_for_cutlass function";
-    Optional<Target> opt_cutlass_target = Target::Current();
-    ICHECK(opt_cutlass_target.defined()) << "Expecting Target::Current to be available";
-    ICHECK_EQ(opt_cutlass_target.value()->kind->name, "cutlass");
-    runtime::Module runtime_mod = (*pf)(mod, opt_cutlass_target.value());
-    Array<runtime::Module> external_mods =
-        mod->GetAttr<Array<runtime::Module>>("external_mods", Array<runtime::Module>()).value();
-    external_mods.push_back(runtime_mod);
-    return WithAttr(mod, "external_mods", external_mods);
-  };
+        VLOG(1) << "CompileForCutlass input:" << std::endl << PrettyPrint(mod);
+        const auto* pf = runtime::Registry::Get("relay.ext.cutlass.compile_for_cutlass");
+        ICHECK(pf != nullptr) << "Cannot find compile_for_cutlass function";
+        Optional<Target> opt_cutlass_target = Target::Current();
+        ICHECK(opt_cutlass_target.defined()) << "Expecting Target::Current to be available";
+        ICHECK_EQ(opt_cutlass_target.value()->kind->name, "cutlass");
+        runtime::Module runtime_mod = (*pf)(mod, opt_cutlass_target.value());
+        Array<runtime::Module> external_mods =
+            mod->GetAttr<Array<runtime::Module>>("external_mods", Array<runtime::Module>()).value();
+        external_mods.push_back(runtime_mod);
+        return WithAttr(mod, "external_mods", external_mods);
+      };
   return tvm::transform::CreateModulePass(pass_func, 0, "CompileForCutlass", {});
 }
 

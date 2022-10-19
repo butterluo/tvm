@@ -556,7 +556,7 @@ def compile_for_cutlass(mod, cutlass_target):
 
     # Compile
     logger.info("Creating CSource module for CUTLASS")
-    create_c_source_module = tvm._ffi.get_global_func("relay.ext.cutlass.create_c_source_module")
+    create_c_source_module = tvm._ffi.get_global_func("relay.ext.cutlass.create_c_source_module") #BTBT 调 src\relay\backend\contrib\cutlass\codegen.cc的’ TVM_REGISTER_GLOBAL("relay.ext.cutlass.create_c_source_module")
     c_module = create_c_source_module(mod)
     function_names = c_module.get_function("get_func_names")()
     compile_options = _get_cutlass_compile_options(**compile_config)

@@ -295,9 +295,9 @@ class TileDescription:
 
     def procedural_name(self):
         return "%dx%d_%dx%d" % (
-            self.threadblock_shape[0],
-            self.threadblock_shape[1],
-            self.threadblock_shape[2],
+            self.threadblock_shape[0],      #M
+            self.threadblock_shape[1],      #N
+            self.threadblock_shape[2],      #K
             self.stages,
         )
 

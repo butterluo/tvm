@@ -61,6 +61,60 @@ def generate_tensor_op_common(
 
     return ops
 
+def generate_sm70_tensor_op_884( #BTBT sm70 only suport fp16 as input
+    out_dtype,
+    arg0_dtype,
+    arg1_dtype,
+    op_creator,
+    check_align,
+    _,
+    profile_all_alignments=False,
+    accumlator_dtype="float32",
+):
+    """Generate GEMM or Conv2D kernels for Turing."""
+    assert out_dtype in ["float32", "float16"]
+    assert arg0_dtype == "float16" and arg1_dtype == "float16"
+    min_cc = 70
+    max_cc = 1024
+
+    math_instructions = [
+        MathInstruction(
+            [8, 8, 4],
+            DataType.f16,
+            DataType.f16,
+            dtype_map[out_dtype],
+            dtype_map[accumlator_dtype],
+            OpcodeClass.TensorOp,
+            MathOperation.multiply_add,
+        )
+    ]
+    alignment_constraints = [8, 4, 2, 1]
+    tile_descriptions = [
+        ([256, 128, 32], 2, [4, 2, 1], min_cc, max_cc),# blkTil.shape, stageNum, tilLayout, min_compute_capbility, mx_compute_capbility
+        ([128, 256, 32], 2, [2, 4, 1], min_cc, max_cc),
+        ([128, 128, 32], 2, [2, 2, 1], min_cc, max_cc),
+        ([64, 128, 32], 2, [2, 2, 1], min_cc, max_cc),
+        ([128, 64, 32], 2, [2, 2, 1], min_cc, max_cc),
+        ([64, 64, 32], 2, [2, 2, 1], min_cc, max_cc),
+        ([64, 128, 64], 2, [1, 2, 2], min_cc, max_cc),
+    ]
+
+    alignment_constraints = [align for align in alignment_constraints if check_align(align)]
+    assert len(alignment_constraints) > 0
+
+    if not profile_all_alignments:
+        alignment_constraints = [alignment_constraints[0]]
+
+    def get_tile_descriptions(math_inst):
+        return [
+            TileDescription(threadblock_shape, stages, warp_count, math_inst, min_cc, max_cc)
+            for threadblock_shape, stages, warp_count, min_cc, max_cc in tile_descriptions
+        ]
+
+    return generate_tensor_op_common(
+        math_instructions, alignment_constraints, get_tile_descriptions, op_creator
+    )
+
 
 def generate_sm75_tensor_op_1688(
     out_dtype,
@@ -286,6 +340,7 @@ def generate_sm80_tensor_op_16816(
 
 
 GENERATOR_FUNC_TABLE = {
+    70: generate_sm70_tensor_op_884,   #BTBT sm70
     75: generate_sm75_tensor_op_1688,
     80: generate_sm80_tensor_op_16816,
 }

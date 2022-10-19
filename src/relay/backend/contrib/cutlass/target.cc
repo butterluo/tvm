@@ -40,7 +40,7 @@ namespace cutlass {
  */
 TVM_REGISTER_TARGET_KIND("cutlass", kDLCUDA)
     .set_attr<Bool>(tvm::attr::kIsExternalCodegen, Bool(true))
-    .set_attr<FTVMRelayToTIR>("RelayToTIR", CompileForCutlass())
+    .set_attr<FTVMRelayToTIR>("RelayToTIR", CompileForCutlass())  //BTBT codegen.cc.CompileForCutlass()会在relay转TIR的pipeline中调用
     // An integer specifying the compute capability. For example, 75 for Turing and
     // 80 or 86 for Ampere.
     .add_attr_option<Integer>("sm", Integer(80))

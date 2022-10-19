@@ -36,7 +36,7 @@ def make_gelu_pattern(bias_out, out_dtype="float16"):
     return is_op("multiply")(add, bias_out)
 
 
-def make_gemm_pattern(with_bias=True, with_act=None, out_dtype="float16"):
+def make_gemm_pattern(with_bias=True, with_act=None, out_dtype="float16"):      #BTBT 这里构造复杂gemm的与relay算子适配的pattern
     """Create a pattern for dense op followed by activations."""
     data = wildcard()
     weight = wildcard()
@@ -201,8 +201,8 @@ def check_conv2d_residual(call, binary_op):
     return all(x == y for (x, y) in zip(lhs.checked_type.shape, rhs.checked_type.shape))
 
 
-@register_pattern_table("cutlass")
-def pattern_table():
+@register_pattern_table("cutlass")                                          #BTBT 在加载py时会调pattern_table()把culs与relay算子的对应关系pattern注册成culs pattern tbl
+def pattern_table():                                                        #BTBT 用relay语法,配置relay算子如何对应上culs算子的pattern,make_gemm_pattern和make_conv2d_pattern等就是具体生成pattern的方法
     """Returns list of triples describing the name, dataflow pattern and predicate for all
     the CUTLASS-supported operators."""
     dense_pat = ("cutlass.dense", make_gemm_pattern(False, None), check_gemm)
@@ -279,7 +279,7 @@ def pattern_table():
     return residual_block_patterns + dense_patterns + conv2d_patterns + conv2d_grad_patterns
 
 
-def partition_for_cutlass(mod, params=None):
+def partition_for_cutlass(mod, params=None):                              #BTBT 把上面注册的culs pattern tbl加入到算子转换的各种pass中, 使relay图变成含culs融合算子的图
     """Partition the input module into CUTLASS-supported subgraphs."""
 
     if params is not None:
@@ -295,13 +295,13 @@ def partition_for_cutlass(mod, params=None):
         with PassContext(opt_level=3):
             mod = remove_bn_pass(mod)
 
-    cutlass_patterns = relay.op.contrib.get_pattern_table("cutlass")
+    cutlass_patterns = relay.op.contrib.get_pattern_table("cutlass")  #BTBT 获取cutls与relay如何适配的pattern tbl,在下面通过MergeComposite对能融合乘cutls算子的relay算子进行融合
 
     seq = Sequential(
         [
             transform.InferType(),
-            transform.MergeComposite(cutlass_patterns),
-            transform.AnnotateTarget(["cutlass"], include_non_call_ops=False),
+            transform.MergeComposite(cutlass_patterns),#BTBT 基于culs的pattern tbl,对能融合乘cutls算子的relay算子进行融合
+            transform.AnnotateTarget(["cutlass"], include_non_call_ops=False),#BTBT 把上面融合后的算子打上annotation,以便后续用culs对其进行编译
             transform.PartitionGraph(bind_constants=False),
         ]
     )
