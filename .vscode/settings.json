@@ -1,0 +1,11 @@
+{
+  "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+  "cmake.generator": "Ninja",
+  "cmake.parallelJobs": 6,
+  "cmake.configureArgs": [
+    "-DCMAKE_VERBOSE_MAKEFILE=ON"
+  ],
+  "cmake.buildArgs": [
+    "--verbose"
+  ]
+}
