@@ -49,7 +49,7 @@ Expr MergeComposite(const Function& func, const Array<runtime::String>& pattern_
   ICHECK_EQ(pattern_names.size(), patterns.size());
   Function merged_func = func;
   // merge the patterns one-by-one in order
-  for (size_t i = 0; i < patterns.size(); i++) {
+  for (size_t i = 0; i < patterns.size(); i++) {//BTBT pattern list的先后对匹配的结果有影响，最先的先匹配，可能会影响到后面的无法匹配
     Map<String, ObjectRef> attrs;
     attrs.Set("Composite", pattern_names[i]);
     merged_func = Downcast<Function>(PartitionPattern(patterns[i], merged_func, attrs, checks[i]));

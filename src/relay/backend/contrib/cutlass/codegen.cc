@@ -860,7 +860,7 @@ class CutlassModuleCodegen {
   runtime::Module Finalize() {
     ICHECK(!func_names_.empty())
         << "Should only create CUTLASS CSourceModule if have at least one CUTLASS partition";
-    const auto* pf = runtime::Registry::Get("runtime.CSourceModuleCreate");
+    const auto* pf = runtime::Registry::Get("runtime.CSourceModuleCreate");  //BTBT 该 CSourceModuleCreate 函数把cutlass代码封装成一个 CSourceModuleNode。见 src/target/source/source_module.cc
     ICHECK(pf != nullptr) << "Cannot find CSource module to create the external runtime module";
     VLOG(1) << "Generated CUTLASS code:" << std::endl << code_stream_.str();
     return (*pf)(code_stream_.str(), "cu", func_names_, const_vars_);

@@ -820,6 +820,22 @@ def test_conv2d_pattern(run_module, dtype="float32"):
     run_and_verify_func(config, run_module=run_module, dtype=dtype)
 
 
+def test_conv2d_byoc(run_module, dtype="float32"):
+    x_shape = (1, 32, 8, 8)
+    k_shape = (16, 32, 3, 3)
+    activation_lst = ["relu"]
+    for a in activation_lst:
+        conv2d, dic, param_lst = get_conv2d(x_shape, k_shape, activation=a, dtype=dtype)
+        conv2d = tvm.IRModule.from_expr(conv2d)
+        config = conv2d, dic, param_lst
+        run_and_verify_func(config, run_module=True, dtype=dtype, target="llvm")
+
+        conv2d_bias, dic, param_lst = get_conv2d_bias(x_shape, k_shape, activation=a, dtype=dtype)
+        conv2d_bias = tvm.IRModule.from_expr(conv2d_bias)
+        config = conv2d_bias, dic, param_lst
+        run_and_verify_func(config, run_module=True, dtype=dtype, target="llvm")
+
+
 def test_conv2d_transpose(run_module, dtype="float32"):
     x_shape = (1, 32, 8, 8)
     for k_shape, groups in [((32, 16, 3, 3), 1), ((32, 1, 3, 3), 32), ((32, 4, 3, 3), 16)]:
@@ -1664,4 +1680,11 @@ def test_dense_plus(dense_profiles):
 
 
 if __name__ == "__main__":
+    import sys
+    tmp = sys.argv                                    #BTBT 需要用这种方法让pytest打印较细的logging
+    sys.argv = [tmp[0],
+            "-k", "test_conv2d_byoc", "-v",
+            "--log-cli-level", "NOTSET",
+            "--log-cli-format", "%(process)d %(thread)d %(pathname)s : %(lineno)d %(funcName)s %(name)s : %(levelname)s : %(message)s"
+    ]
     tvm.testing.main()

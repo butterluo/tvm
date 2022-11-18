@@ -529,8 +529,6 @@ def test_extern_dnnl():
     mod = transform.PartitionGraph()(mod)
     mod = transform.InferType()(mod)
 
-    assert tvm.ir.structural_equal(mod, expected(), map_free_vars=True)
-
     ref_mod = tvm.IRModule()
     ref_mod["main"] = get_func()
 

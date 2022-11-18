@@ -5,6 +5,30 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "(gdb) Attach",
+      "type": "cppdbg",
+      "request": "attach",
+      "program": "/bin/python3",
+      "processId":"${command:pickProcess}",
+      "additionalSOLibSearchPath": "${workspaceFolder}/build",
+      "MIMode": "gdb",
+      // "args": [],
+      // "stopAtEntry": false,
+      // "cwd": "${workspaceFolder}",
+      "setupCommands": [
+          {
+              "description": "Enable pretty-printing for gdb",
+              "text": "-enable-pretty-printing",
+              "ignoreFailures": true
+          }
+          // ,{
+          //     "description":  "Set Disassembly Flavor to Intel",
+          //     "text": "-gdb-set disassembly-flavor intel",
+          //     "ignoreFailures": true
+          // }
+      ]
+    },
+    {
       "name": "Python: Current File",
       "type": "python",
       "request": "launch",
@@ -12,7 +36,8 @@
       "console": "integratedTerminal",
       "justMyCode": false,
       "env": {
-        "TVM_LOG_DEBUG":"DEFAULT=3"
+        "TVM_LOG_DEBUG":"DEFAULT=3",
+        "TOPHUB_LOCATION":"NONE"
       }
     }
   ]
