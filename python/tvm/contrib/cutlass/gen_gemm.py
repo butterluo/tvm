@@ -224,11 +224,11 @@ class CutlassGemmProfiler:
         # See https://github.com/NVIDIA/cutlass/issues/362.
         # When the above issue is resolved, we can remove the alignment check on M below.
 
-        ops = GENERATOR_FUNC_TABLE[self.sm](
+        ops = GENERATOR_FUNC_TABLE[self.sm](  #根据提供的超参生成待测试的kernel
             out_dtype,
             arg0_dtype,
             arg1_dtype,
-            enumerate_gemm_operators,
+            enumerate_gemm_operators,  # op creator
             lambda align: all([dim % align == 0 for dim in [M, N, K]]),
             use_3xtf32,    #BTBT ???
             profile_all_alignments=profile_all_alignments,

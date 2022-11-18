@@ -968,8 +968,9 @@ if __name__ == "__main__":
     import sys
     tmp = sys.argv                                    #BTBT 需要用这种方法让pytest打印较细的logging
     sys.argv = [tmp[0],
+        "-v", "-k", "test_dense_bias_relu_sm70",
         "--log-cli-level", "NOTSET",
-        "--log=cli-format", "%(process)d %(thread)d %(pathname)s : %(lineno)d %(funcName)s %(name)s : %(levelname)s : %(message)s"
+        "--log-cli-format", "%(process)d %(thread)d %(pathname)s : %(lineno)d %(funcName)s %(name)s : %(levelname)s : %(message)s"
     ]
     tvm.testing.main()
 

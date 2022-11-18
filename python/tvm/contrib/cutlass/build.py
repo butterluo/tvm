@@ -566,7 +566,7 @@ def compile_for_cutlass(mod, cutlass_target):
 
     # Recover static library
     logger.info("Loading compiled CUTLASS code")
-    final_mod = tvm.runtime.load_static_library(lib_path, function_names)
+    final_mod = tvm.runtime.load_static_library(lib_path, function_names)#BTBT 生成的culs的C代码编译成cutlass.o再被load入tvm作为一个外部模块
 
     logger.info("Done with CUTLASS compilation")
     return final_mod

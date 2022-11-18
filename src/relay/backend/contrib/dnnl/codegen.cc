@@ -276,7 +276,8 @@ class CodegenDNNL : public MemoizedExprTranslator<std::vector<Output>>, public C
       return GenerateBody(conv_call, "dnnl_fused_conv2d_bias_relu", GetArgumentNames(caller),
                           Conv2d(conv_call));
     } else if (pattern_name == "dnnl.conv2d_relu") {
-      const auto* conv_call = GetRootCall(callee->body.as<CallNode>(), 1, {"nn.conv2d", "nn.relu"});
+      std::vector<std::string> expected_op_names = {"nn.conv2d", "nn.relu"};
+      const auto* conv_call = GetRootCall(callee->body.as<CallNode>(), 1, expected_op_names);
       return GenerateBody(conv_call, "dnnl_fused_conv2d_relu", GetArgumentNames(caller),
                           Conv2d(conv_call));
     }
@@ -598,6 +599,29 @@ runtime::Module DNNLCompiler(const ObjectRef& ref) {
 }
 
 TVM_REGISTER_GLOBAL("relay.ext.dnnl").set_body_typed(DNNLCompiler);
+
+/*!
+ * \brief Replace var expr which bind with args of call node
+ *
+ * \param args vector of expression (contains vars or constant nodes)
+ * \param cn call node which describe mapping of internal body vars with args
+ * \return updated vector of expressions
+ */
+static tvm::Array<Expr> BindToCallNodeArgs(const std::vector<Expr>& args, const CallNode* cn) {
+  tvm::Array<Expr> res;
+  for (const auto& arg : args) {
+    if (arg->IsInstance<ConstantNode>()) {
+      res.push_back(arg);
+    } else {
+      auto body_params = cn->op.as<FunctionNode>()->params;
+      auto found = std::find(body_params.begin(), body_params.end(), arg);
+      ICHECK(found != body_params.end());
+      auto idx = std::distance(body_params.begin(), found);
+      res.push_back(cn->args[idx]);
+    }
+  }
+  return res;
+}
 
 /*!
  * \brief Constant Updater for DNNL JSON runtime

@@ -1,0 +1,20 @@
+{
+  "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+  // "python.pythonPath": "/path/to/python",
+  // "python.envFile": "${workspaceFolder}/.env",
+  // "terminal.integrated.env.linux": {
+  //   "PYTHONPATH": "${workspaceFolder}/python:${env:PYTHONPATH}",
+  //   "TVM_BACKTRACE": "1",
+  //   "DMLC_LOG_DEBUG": "1"
+  // },
+  // "ffi_navigator.pythonpath": "/path/to/python",
+  // "python.analysis.extraPaths": ["python", "${fileDirname}"],
+  "cmake.generator": "Ninja",
+  "cmake.parallelJobs": 6,
+  "cmake.configureArgs": [
+    "-DCMAKE_VERBOSE_MAKEFILE=ON"
+  ],
+  "cmake.buildArgs": [
+    "--verbose"
+  ]
+}

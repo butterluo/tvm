@@ -598,7 +598,7 @@ class Conv(OnnxOpConverter):
         kernel = inputs[1]
         input_shape = infer_shape(data)
         ndim = len(input_shape)
-
+        #BTBT 处理ONNX的卷积算子属性和TVM Relay的卷积OP属性不一致的问题
         kernel_type = infer_type(inputs[1])
         kernel_shapes = [get_const_tuple(kernel_type.checked_type.shape)]
 
@@ -625,7 +625,7 @@ class Conv(OnnxOpConverter):
                 msg = 'Value {} in attribute "auto_pad" of operator Conv is invalid.'
                 raise tvm.error.OpAttributeInvalid(msg.format(attr["auto_pad"]))
             attr.pop("auto_pad")
-
+        #BTBT 完成属性的转换以及OP转换
         attr["channels"] = kernel_shapes[0][0]
         out = AttrCvt(
             op_name=dimension_picker("conv"),
@@ -5448,19 +5448,19 @@ class GraphProto:
         network weights/bias such as "1", "2"...
         For convenience, we rename the `real` input names to "input_0",
         "input_1"... And renaming parameters to "param_0", "param_1"...
-
+        #BTBT 基于ONNX模型构建Relay IR。基于 https://zhuanlan.zhihu.com/p/365800737 加的中文注释
         Parameters
         ----------
         graph : onnx protobuf object
             The loaded onnx graph
 
-        opset : opset version
+        opset : opset version onnx的操作集版本
 
         get_output_expr: bool
             If set to true, this conversion will return each output expression rather
             than a packaged module. This can be useful when converting subgraphs to
             relay.
-
+            如果设置为true，则此转换将返回每个输出表达式，而不是打包的模块。将子图转换为Relay时，这可能很有用。
         Returns
         -------
         mod : tvm.IRModule
@@ -5476,31 +5476,31 @@ class GraphProto:
         self._check_for_unsupported_ops(graph)
         self._construct_nodes(graph)
 
-        # now return the outputs
+        # now return the outputs # 解析ONNX模型的输出
         outputs = [self._nodes[self._parse_value_proto(i)] for i in graph.output]
         outputs = outputs[0] if len(outputs) == 1 else _expr.Tuple(outputs)
-        # If requested, directly return the converted expressions.
+        # If requested, directly return the converted expressions. # 如果需要直接返回转换后的表达式，在这里return
         if get_output_expr:
             return outputs
         ## Maintain the order of inputs and parameters from the ONNX graph, but only include
-        ## those parameters that are needed to execute the relay graph
+        ## those parameters that are needed to execute the relay graph # 保持来自ONNX Graph的输入和参数顺序，但仅仅包含这些需要执行转换到Relay的节点
         free_vars = analysis.free_vars(outputs)
         nodes = {v: k for k, v in self._nodes.items()}
         free_vars = [nodes[var] for var in free_vars]
         for i_name in self._params:
             if i_name in free_vars and i_name not in self._inputs:
                 self._inputs[i_name] = self._nodes[i_name]
-        # Create a function from our output expression and all input variables.
+        # Create a function from our output expression and all input variables.  # 根据我们的输出表达式和所有输入变量创建一个函数。
         func = _function.Function([v for k, v in self._inputs.items()], outputs)
-        return IRModule.from_expr(func), self._params
+        return IRModule.from_expr(func), self._params  # 把这个函数用IRModule包起来返回，并同时返回权重参数
 
-    def _parse_graph_initializers(self, graph):
+    def _parse_graph_initializers(self, graph): ## 解析网络的输入到relay中, 又叫参数，onnx的initializer就是用来保存模型参数的
         """Parse network inputs to relay, aka parameters."""
         for init_tensor in graph.initializer:
             if not init_tensor.name.strip():
                 raise ValueError("Tensor's name is required.")
-            array = self._parse_array(init_tensor)
-            if self._freeze_params:
+            array = self._parse_array(init_tensor) ## 具体实现就是先把这个TensorProto使用get_numpy函数获得值，再reshape到特定形状，再基于这个numpy构造tvm.nd.array
+            if self._freeze_params: # 前面解释过，如果设置冻结参数，则将这个参数设置为Relay中的常量OP
                 self._nodes[init_tensor.name] = _expr.const(array)
             else:
                 self._params[init_tensor.name] = array
@@ -5510,20 +5510,20 @@ class GraphProto:
                     dtype=self._params[init_tensor.name].dtype,
                 )
 
-    def _parse_graph_input(self, graph):
+    def _parse_graph_input(self, graph): # 解析ONNX模型的输入
         for i in graph.input:
             # from onnx v0.2, GraphProto.input has type ValueInfoProto,
-            #  and the name is 'i.name'
+            #  and the name is 'i.name' # 获取i这个输入的名字，shape，数据类型以及shape每个维度对应的名字
             i_name, i_shape, d_type, i_shape_name = get_info(i)
             if i_name in self._params:
-                # i is a param instead of input
+                # i is a param instead of input # 判断i这个输入是权重参数还是输入
                 self._num_param += 1
                 self._nodes[i_name] = new_var(
                     i_name, shape=self._params[i_name].shape, dtype=self._params[i_name].dtype
                 )
-            elif i_name in self._nodes:
+            elif i_name in self._nodes: # 输入节点已经在Relay IR中了就不用处理了
                 continue
-            else:
+            else: # 真正的输入节点，依赖用户进行指定
                 self._num_input += 1
                 self._input_names.append(i_name)
                 if i_name in self._shape:
@@ -5552,7 +5552,7 @@ class GraphProto:
                 self._shape
             )
 
-    def _check_for_unsupported_ops(self, graph):
+    def _check_for_unsupported_ops(self, graph): # 获取不支持的算子列表
         convert_map = _get_convert_map(self.opset)
         unsupported_ops = set()
         for node in graph.node:
@@ -5563,21 +5563,21 @@ class GraphProto:
                 and op_name not in _identity_list
             ):
                 unsupported_ops.add(op_name)
-        if unsupported_ops:
+        if unsupported_ops: # 输出不支持的算子集合
             msg = "The following operators are not supported for frontend ONNX: "
             msg += ", ".join(unsupported_ops)
             raise tvm.error.OpNotImplemented(msg)
 
-    def _construct_nodes(self, graph):
+    def _construct_nodes(self, graph): # 到这里说明这个ONNX模型的所有算子都被Relay支持，可以正常进行转换了
         """Nodes are stored as directed acyclic graph."""
         for node in graph.node:
             op_name = node.op_type
-            attr = self._parse_attr(node.attribute)
+            attr = self._parse_attr(node.attribute) # 解析attribute参数
             # Create and populate input list.
-            inputs = onnx_input()
+            inputs = onnx_input() # 创建并填充onnx输入对象。
             for i in node.input:
                 if i != "":
-                    inputs.append(self._nodes[self._renames.get(i, i)])
+                    inputs.append(self._nodes[self._renames.get(i, i)]) # self._renames.get(i, i)用来获取ONNX Graph每个节点的输入
                 else:
                     inputs.append(None)
             i_name = self._parse_value_proto(node)
@@ -5585,27 +5585,27 @@ class GraphProto:
             attr["tvm_custom"] = {}
             attr["tvm_custom"]["name"] = i_name
             attr["tvm_custom"]["num_outputs"] = len(node_output)
-
+            # # 执行转换操作 # 输出的 op 可能只有一个也可能有多个
             op = self._convert_operator(op_name, inputs, attr, self.opset)
             if not isinstance(op, _expr.TupleWrapper):
                 outputs_num = 1
             else:
                 outputs_num = len(op)
 
-            if outputs_num == 1:
+            if outputs_num == 1: # 输出的 op 只有一个有可能是常量OP，可以执行一次常量折叠功能
                 op = fold_constant(op)
             else:
                 op = _expr.TupleWrapper(fold_constant(op.astuple()), len(op))
 
             if outputs_num > 1:
-                # ONNX supports optional outputs for some nodes.
+                # ONNX supports optional outputs for some nodes. # ONNX的某些节点支持可选输出
                 # This block searches for missing outputs in the ONNX graph
-                # and removes any unneeded ops
+                # and removes any unneeded ops # 这一块在ONNX的Graph中搜索缺失的输出并移除不需要的节点
                 valid_outputs = [False] * outputs_num
                 for i, output in enumerate(node_output):
                     if output != "":
                         valid_outputs[i] = True
-                # If we have outputs ONNX isn't expecting, we need to drop them
+                # If we have outputs ONNX isn't expecting, we need to drop them # 如果我们有ONNX不期望出现的输出，我们需要删除它们
                 if not all(valid_outputs):
                     tup = op.astuple()
                     # TupleWrapper can also wrap ops with TupleType outputs
